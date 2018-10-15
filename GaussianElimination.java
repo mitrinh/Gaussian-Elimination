@@ -6,14 +6,63 @@
  *   equations to solve (let’s say n <=10) using the following three methods.
  */
 
-public class GaussianElimination {
+import java.util.Scanner;
 
+public class GaussianElimination {
+    // creates a long start, end, and total time variable to time an alg.
+    long startTime;
+    long endTime;
+    long totalTime;
+    Scanner input;
+    // constructor: creates scanner object
+    public GaussianElimination(){
+        input = new Scanner(System.in);
+    }
+    
+    /** 
+     * asks the user to enter the number of linear equations
+     * @return the number of linear equations 
+     */
+    public int getNumOfLinearEq() {
+        System.out.print("Enter the number of equations: ");
+        return input.nextInt();
+    } // end getNumOfLinearEq
+    
+    /** 
+     * asks the user to enter the coefficients for the augmented coefficient 
+     * matrix and returns the matrix from that information
+     * @param numOfLinearEq the number of linear equations
+     * @return the augmented coefficient matrix 
+     */
+    public float[][] getMatrix(int numOfLinearEq) {
+        float[][] matrix = new float[numOfLinearEq][numOfLinearEq+1];
+        String[] coefficients;
+        // rows
+        for (int i = 0; i < numOfLinearEq; i++) {
+            System.out.print("Enter the " + (numOfLinearEq+1) + 
+                    " coefficients for row " + (i+1) +
+                    " (seperate each coefficient by space): ");
+            coefficients = input.nextLine().split("\\s+");
+            // columns
+            for(int j = 0; j < coefficients.length; j++){
+                matrix[i][j] = Float.parseFloat(coefficients[j]);
+                System.out.print(matrix[i][j] + " ");
+            }
+            System.out.println();
+        }
+        return matrix;
+    } // end getMatrix
+    
     /**
+     * performs the 3 algorithms that solves a system of equations
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        System.out.println("Scaled Partial Pivoting, Jacobi Iterative, "
-                + "Gauss-Seidel");
-    }
+        GaussianElimination ge = new GaussianElimination();
+        int numOfLinearEq = ge.getNumOfLinearEq();
+        ge.input.nextLine();
+        System.out.println(numOfLinearEq + " equations.");
+        float[][] matrix = ge.getMatrix(numOfLinearEq);
+    } // end main
     
-}
+} // end GaussianElimination
