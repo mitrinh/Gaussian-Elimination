@@ -17,6 +17,7 @@ public class GaussianElimination {
     // creates a long start, end, and total time variable to time an alg.
     int numOfLinearEq;
     float[][] matrix;
+    float[][] originalMatrix;
     Scanner input;
     
     // constructor: initializes matrix essentially
@@ -25,6 +26,7 @@ public class GaussianElimination {
         numOfLinearEq = getNumOfLinearEq();
         input.nextLine(); // clear any remaining input in scanner
         matrix = getMatrix();
+        originalMatrix = Arrays.copyOf(matrix, matrix.length);
     } // end constructor
     
     /** 
@@ -272,7 +274,8 @@ public class GaussianElimination {
         System.out.println("x^" + 0 + ":");
         printResults(results);
         // 50 iterations if desired error not achieved
-        for(int i = 0; i < 50; i++) {            
+        for(int i = 0; i < 50; i++) {
+            previousResults = results.clone();
             // row
             for(int j = 0; j < numOfLinearEq; j++){
                 // set result to b value/xj coefficient
@@ -281,13 +284,12 @@ public class GaussianElimination {
                 for(int k = numOfLinearEq-1; k >= 0; k--){
                     if(k != j) {
                         // subtract all values that are used for the sum
-                        results[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
+                        tempResults[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
                     }
                 }
             }
-            // store old results and set current results
-            previousResults = Arrays.copyOf(results, results.length);
-            results = tempResults;
+            // update current results
+            results = tempResults.clone();
             tempResults = new float[numOfLinearEq];
             // will only calculate error when there's a previous iteration
             if(i > 0){
@@ -394,6 +396,11 @@ public class GaussianElimination {
         System.out.println("");
     } // end printMatrix        
             
+    public static void cloneMatrix(float[][] target, float[][] source){
+        for(int i = 0; i < source.length; i++)
+            target[i] = source[i].clone();
+    }
+    
     /**
      * performs the 3 algorithms that solves a system of equations
      * @param args the command line arguments
@@ -402,13 +409,20 @@ public class GaussianElimination {
     public static void main(String[] args) throws FileNotFoundException {
         GaussianElimination ge = new GaussianElimination();
         float[][] myMatrix = ge.matrix;
-        GaussianElimination.printMatrix(myMatrix);
+        float[][] originalMatrix = new float[myMatrix.length][myMatrix[0].length];
+        cloneMatrix(originalMatrix, myMatrix);
+        GaussianElimination.printMatrix(originalMatrix);
+        
         System.out.println("Scaled Partial Pivoting Gaussian Elimination:");
-        ge.scaledPartialPivoting(myMatrix);
-//        System.out.println("Gauss Jacobi:");
-//        ge.Jacobi(myMatrix);
-//        System.out.println("Gauss Siedel:");
-//        ge.Siedel(myMatrix);
+        ge.scaledPartialPivoting(originalMatrix);
+        cloneMatrix(originalMatrix, myMatrix);
+        
+        System.out.println("Gauss Jacobi:");
+        ge.Jacobi(originalMatrix);
+        cloneMatrix(originalMatrix, myMatrix);
+        
+        System.out.println("Gauss Siedel:");
+        ge.Siedel(originalMatrix);
     } // end main
     
 } // end GaussianElimination
