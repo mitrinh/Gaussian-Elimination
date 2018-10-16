@@ -8,7 +8,9 @@
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.Stack;
 import java.util.Scanner;
 
 public class GaussianElimination {
@@ -23,7 +25,6 @@ public class GaussianElimination {
         numOfLinearEq = getNumOfLinearEq();
         input.nextLine(); // clear any remaining input in scanner
         matrix = getMatrix();
-//        input.nextLine();
     } // end constructor
     
     /** 
@@ -97,39 +98,41 @@ public class GaussianElimination {
     /**
      * scaled partial pivoting method for Gaussian Elimination
      */
-    private void scaledPartialPivoting(){
-        float[][] tempMatrix = matrix;
-        float[] weights = getWeights();
-        // [1][1] = row number, [1][2] = ratio
-        float[][] maxRatioPair;
-        // record of all pivotal equations and initialize them with -1
-        int[] pivotRecord = new int[numOfLinearEq-1];
-        Arrays.fill(pivotRecord, -1);
-        /* iterate through each equation to get pivotal equation */
+    private void scaledPartialPivoting(float[][] matrix){
+        // get weights
+        float[] weights = getWeights(matrix);
+        // initialize variables
+        float[] results = new float[numOfLinearEq];
+        int pivotRow;
+        // stack of all pivotal equations
+        Stack<Integer> pivotRecord = new Stack<>();
         // iterate through each column except for b and last pivotal equation
         for(int i = 0; i < numOfLinearEq-1; i++){
             // get pivotal equation
-            maxRatioPair = getMaxRatioPair(i,weights,pivotRecord);
-            System.out.println("pivot row = " + (int)maxRatioPair[0][0]);
-            System.out.println("pivot ratio = " + maxRatioPair[0][1]);
-            // perform gauss elimination, returning a new matrix
-            performGaussElimination(i,maxRatioPair,weights,pivotRecord,tempMatrix);
+            pivotRow = getPivotRow(i,weights,pivotRecord,matrix);
+            // perform gauss elimination, transforming old matrix to new matrix
+            performGaussElimination(i,pivotRow,weights,pivotRecord,matrix);
+            // perform backwards substitution
         }
-        System.out.println("");
+        printResults(results);
     } // end scaledPartialPivoting
     
     /**
-     * gets the weight iteratively
+     * gets the weight iteratively using maximize function
+     * @param matrix augmented matrix
      * @return weights 
      */
-    private float[] getWeights() {
+    private float[] getWeights(float[][] matrix) {
+        // initialize variables
         float[] weights = new float[numOfLinearEq];
         float maximum; 
+        // iterate through each equation to get the highest number of each one
         for(int i = 0; i < numOfLinearEq; i++) {
             maximum = -1;
             for(int j = 0; j < numOfLinearEq+1; j++) {
                 maximum = Math.max(maximum, Math.abs(matrix[i][j]));
             }
+            // set the weight to max number in that equation
             weights[i] = maximum;
         }
         return weights;
@@ -137,44 +140,46 @@ public class GaussianElimination {
     
     /**
      * gets the maxRatioPair for the pivotal equation
+     * @param i column
+     * @param weights array of weights
+     * @param pivotRecord record of current and previous pivots
+     * @param matrix augmented matrix
      * @return maxRatioPair
      */    
-    private float[][] getMaxRatioPair(int i, float[] weights, 
-            int[] pivotRecord){
-        float[][] maxRatioPair = { {-1,-1} };
+    private int getPivotRow(int i, float[] weights, Stack<Integer> pivotRecord, 
+            float[][] matrix){
+        // initialize variables
+        int pivotRow;
+        float[][] maxRatioPair = { {-1, -1} }; // [1][1] = row number, [1][2] = ratio
         float ratio;
-        // get the maxRatioPair through each row to get highest ratio
-        // this will give the pivotal equation row
+        // iterate through every row to get max num/weight ratio for pivot
         for(int j = 0; j < numOfLinearEq; j++){
-            // do not include previous pivots to getting max ratio
-            if(!contains(pivotRecord,j)) { 
-                // ratio = matrix number / weight of row
-                ratio = (float) Math.floor((
-                        Math.abs(matrix[j][i]) / weights[j]) * 100) / 100;
+            // do not include previous pivots to getting a new pivot
+            if(!pivotRecord.contains(j)) { 
+                // ratio = abs(matrix number / weight of that row)
+                ratio = Math.abs(matrix[j][i] / weights[j]);
+                // replace max if current ratio is higher
                 if(ratio > maxRatioPair[0][1]) {
                     maxRatioPair[0][0] = j;
                     maxRatioPair[0][1] = ratio;
                 }
             }
         }
-        // add pivot to record
-        pivotRecord[i] = (int) maxRatioPair[0][0];
-        System.out.print("pivot record: ");
-        for(int pivot : pivotRecord){
-            System.out.print(pivot + " ");
-        }
-        System.out.println("");
-        return maxRatioPair;
+        // set pivot row to paired row of max ratio
+        pivotRow = (int) maxRatioPair[0][0];
+        // push pivot to record stack
+        pivotRecord.push(pivotRow);
+        return pivotRow;
     } // end getMaxRatioPair
     
     /**
-    * performs gauss elimination of a matrix
-    * @param i the pivotal column
-    * @param maxRatioPair pivotal equation
-    * @param pivotRecord record of current and previous pivots
-    */
-    private void performGaussElimination(int i, float[][] maxRatioPair, 
-            float[] weights, int[] pivotRecord, float[][] tempMatrix){
+     * performs gauss elimination of a matrix
+     * @param i the pivotal column
+     * @param maxRatioPair pivotal equation
+     * @param pivotRecord record of current and previous pivots
+     */
+    private void performGaussElimination(int i, int pivotRow,float[] weights, 
+            Stack<Integer> pivotRecord, float[][] matrix){
         float pivotNumber;
         float pivotRate;
         float targetNumber;
@@ -184,41 +189,25 @@ public class GaussianElimination {
         for(int j = 0; j < numOfLinearEq; j++) {
             // don't perform gauss elimiation if row is currently  pivot or if already
             // has 0 at pivotal column
-            if(!contains(pivotRecord,j) || tempMatrix[j][i] == 0) {
+            if((!pivotRecord.contains(j)) || matrix[j][i] == 0) {
                 // pivot rate = matrix[pivot row][pivot col] / matrix[row][pivot col]
-                pivotRate = tempMatrix[(int) maxRatioPair[0][0]][i] / tempMatrix[j][i];
+                pivotRate = matrix[pivotRow][i] / matrix[j][i];
                 // pivot weight = weight of the pivot equation;
-                pivotWeight = weights[(int) maxRatioPair[0][0]];
+                pivotWeight = weights[pivotRow];
                 // columns
                 for(int k = 0; k < numOfLinearEq+1; k++) {
                     // pivotNumber = xk , number that is subtracted
-                    pivotNumber = tempMatrix[(int) maxRatioPair[0][0]][k];
+                    pivotNumber = matrix[pivotRow][k];
                     // targetNumber = matrix number that is being changed
-                    targetNumber = tempMatrix[j][k];
+                    targetNumber = matrix[j][k];
                     // new matrix number = (pivotNumber - pivotRate*targetnumber) / pivot weight
-                    // round to 3 decimal places
-                    tempMatrix[j][k] = (float) (Math.floor(
-                            ((pivotNumber - (pivotRate * targetNumber)) / pivotWeight)
-                                * 100) / 100);
+                    matrix[j][k] = (pivotNumber - pivotRate * targetNumber) / pivotWeight;
                 }
                 // print intermidiate matrixes
-                printMatrix(tempMatrix);
+                printMatrix(matrix);
             }
         }
     } // return performGaussElimination
-    
-    /**
-     * 
-     * @param pivotRecord record of pivots
-     * @param key number you want to see if it is contained
-     * @return whether pivotRecord has key
-     */
-    public boolean contains(int[] pivotRecord,int key){
-        for(int num : pivotRecord){
-            if(num == key) return true;
-        }
-        return false;
-    } // end contains
     
     /**
      * Gauss Jacobi iterative method
@@ -276,9 +265,9 @@ public class GaussianElimination {
     } // end Jacobi
     
     /**
-    * Gauss Siedel iterative method
+     * Gauss Siedel iterative method
      * @param matrix augmented matrix
-    */
+     */
     public void Siedel(float [][] matrix){
         // asks user for desired error
         System.out.print("Enter the desired error in decimal form: ");
@@ -309,10 +298,6 @@ public class GaussianElimination {
             }
             // will only calculate error when there's a previous iteration
             if(i > 0){
-//                printResults(previousResults);
-//                System.out.println("");
-//                printResults(results);
-//                System.out.println("");
                 // get the sum of error from all numbers
                 for (int k = 0; k < results.length; k++){
                     totalError += Math.abs(results[k] - previousResults[k]) / 2; 
@@ -336,8 +321,11 @@ public class GaussianElimination {
      * @param results results from a method 
      */
     public void printResults(float[] results){
+        // truncate to 3 decimal places to look better
+        DecimalFormat df = new DecimalFormat("#.###");
+        // iterate through each result
         for(int i = 0; i < results.length; i++){
-            System.out.println("x" + (i+1) + " = " + results[i]);
+            System.out.println("x" + (i+1) + " = " + df.format(results[i]));
         }
         System.out.println("");
     } // end print results;
@@ -347,10 +335,13 @@ public class GaussianElimination {
      * @param matrix the augmented matrix
      */
     public static void printMatrix(float[][] matrix){
+        // truncate to 3 decimal places to look better
+        DecimalFormat df = new DecimalFormat("#.###");
+        // iterate through each cell of matrix to print
         for (float[] row : matrix) {
             System.out.print("[ ");
             for (int column = 0; column < row.length; column++) {
-                System.out.print(row[column] + " ");
+                System.out.print(df.format(row[column]) + " ");
             }
             System.out.println("]");
         }
@@ -366,11 +357,12 @@ public class GaussianElimination {
         GaussianElimination ge = new GaussianElimination();
         float[][] myMatrix = ge.matrix;
         GaussianElimination.printMatrix(myMatrix);
-        //ge.scaledPartialPivoting();
-        System.out.println("Gauss Jacobi:");
-        ge.Jacobi(myMatrix);
-        System.out.println("Gauss Siedel:");
-        ge.Siedel(myMatrix);
+        System.out.println("Scaled Partial Pivoting Gaussian Elimination:");
+        ge.scaledPartialPivoting(myMatrix);
+//        System.out.println("Gauss Jacobi:");
+//        ge.Jacobi(myMatrix);
+//        System.out.println("Gauss Siedel:");
+//        ge.Siedel(myMatrix);
     } // end main
     
 } // end GaussianElimination
