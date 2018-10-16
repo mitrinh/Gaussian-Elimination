@@ -102,18 +102,22 @@ public class GaussianElimination {
         // get weights
         float[] weights = getWeights(matrix);
         // initialize variables
-        float[] results = new float[numOfLinearEq];
         int pivotRow;
+        float[] results = new float[numOfLinearEq];
+        // initialize each cell in results to zero
+        Arrays.fill(results, 0);        
         // stack of all pivotal equations
         Stack<Integer> pivotRecord = new Stack<>();
-        // iterate through each column except for b and last pivotal equation
-        for(int i = 0; i < numOfLinearEq-1; i++){
+        // iterate through each column except for b 
+        // to get gauss eliminated augmented matrix
+        for(int i = 0; i < numOfLinearEq; i++){
             // get pivotal equation
             pivotRow = getPivotRow(i,weights,pivotRecord,matrix);
             // perform gauss elimination, transforming old matrix to new matrix
-            performGaussElimination(i,pivotRow,weights,pivotRecord,matrix);
-            // perform backwards substitution
+            gaussElimination(i,pivotRow,weights,pivotRecord,matrix);
         }
+        // perform backwards substitution
+        backwardSubstitution(matrix,pivotRecord,results);
         printResults(results);
     } // end scaledPartialPivoting
     
@@ -156,19 +160,30 @@ public class GaussianElimination {
         for(int j = 0; j < numOfLinearEq; j++){
             // do not include previous pivots to getting a new pivot
             if(!pivotRecord.contains(j)) { 
-                // ratio = abs(matrix number / weight of that row)
-                ratio = Math.abs(matrix[j][i] / weights[j]);
-                // replace max if current ratio is higher
-                if(ratio > maxRatioPair[0][1]) {
-                    maxRatioPair[0][0] = j;
-                    maxRatioPair[0][1] = ratio;
+                // pushes last pivot to stack if last iteration
+                if(i+1 == numOfLinearEq) {
+                    pivotRecord.push(j);
+                    break;
+                }
+                else {
+                    // ratio = abs(matrix number / weight of that row)
+                    ratio = Math.abs(matrix[j][i] / weights[j]);
+                    // replace max if current ratio is higher
+                    if(ratio > maxRatioPair[0][1]) {
+                        maxRatioPair[0][0] = j;
+                        maxRatioPair[0][1] = ratio;
+                    }
                 }
             }
         }
-        // set pivot row to paired row of max ratio
-        pivotRow = (int) maxRatioPair[0][0];
-        // push pivot to record stack
-        pivotRecord.push(pivotRow);
+        // if last iteration return top of stack, else add to stack
+        if(i+1 != numOfLinearEq){
+            // set pivot row to paired row of max ratio
+            pivotRow = (int) maxRatioPair[0][0];
+            // push pivot to record stack
+            pivotRecord.push(pivotRow);    
+        }
+        else pivotRow = pivotRecord.peek();
         return pivotRow;
     } // end getMaxRatioPair
     
@@ -178,42 +193,71 @@ public class GaussianElimination {
      * @param maxRatioPair pivotal equation
      * @param pivotRecord record of current and previous pivots
      */
-    private void performGaussElimination(int i, int pivotRow,float[] weights, 
+    private void gaussElimination(int i, int pivotRow,float[] weights, 
             Stack<Integer> pivotRecord, float[][] matrix){
         float pivotNumber;
         float pivotRate;
         float targetNumber;
         float pivotWeight;
-        /* perform gaussian elimination for each row using that pivot */
-        // rows
-        for(int j = 0; j < numOfLinearEq; j++) {
-            // don't perform gauss elimiation if row is currently  pivot or if already
-            // has 0 at pivotal column
-            if((!pivotRecord.contains(j)) || matrix[j][i] == 0) {
-                // pivot rate = matrix[pivot row][pivot col] / matrix[row][pivot col]
-                pivotRate = matrix[pivotRow][i] / matrix[j][i];
-                // pivot weight = weight of the pivot equation;
-                pivotWeight = weights[pivotRow];
-                // columns
-                for(int k = 0; k < numOfLinearEq+1; k++) {
-                    // pivotNumber = xk , number that is subtracted
-                    pivotNumber = matrix[pivotRow][k];
-                    // targetNumber = matrix number that is being changed
-                    targetNumber = matrix[j][k];
-                    // new matrix number = (pivotNumber - pivotRate*targetnumber) / pivot weight
-                    matrix[j][k] = (pivotNumber - pivotRate * targetNumber) / pivotWeight;
+        // do this if not last iteration
+        if(i+1 != numOfLinearEq) {
+            /* perform gaussian elimination for each row using that pivot */
+            // rows
+            for(int j = 0; j < numOfLinearEq; j++) {
+                // don't perform gauss elimiation if row is currently  pivot or if already
+                // has 0 at pivotal column
+                if((!pivotRecord.contains(j)) || matrix[j][i] == 0) {
+                    // pivot rate = matrix[pivot row][pivot col] / matrix[row][pivot col]
+                    pivotRate = matrix[pivotRow][i] / matrix[j][i];
+                    // pivot weight = weight of the pivot equation;
+                    pivotWeight = weights[pivotRow];
+                    // columns
+                    for(int k = 0; k < numOfLinearEq+1; k++) {
+                        // pivotNumber = xk , number that is subtracted
+                        pivotNumber = matrix[pivotRow][k];
+                        // targetNumber = matrix number that is being changed
+                        targetNumber = matrix[j][k];
+                        // new matrix number = (pivotNumber - pivotRate*targetnumber) / pivot weight
+                        matrix[j][k] = (pivotNumber - pivotRate * targetNumber) / pivotWeight;
+                    }
+                    // print intermidiate matrixes
+                    printMatrix(matrix);
                 }
-                // print intermidiate matrixes
-                printMatrix(matrix);
             }
         }
     } // return performGaussElimination
     
     /**
+     * performs backward substitution on an gauss eliminated augmented matrix
+     * @param matrix
+     * @param pivotRecord 
+     */
+    private void backwardSubstitution(float[][] matrix, Stack<Integer> pivotRecord,
+            float[] results){        
+        int pivotRow;
+        float tempWeight;
+        // iterates through each pivot from the pivotRecord, latest first
+        for(int i = numOfLinearEq-1; !pivotRecord.empty();i--) {
+            // set the latest pivot in record to pivotRow then delete it from stack
+            pivotRow = pivotRecord.pop();
+            tempWeight = matrix[pivotRow][i];
+            // set result to b value/xj coefficient
+            results[i] = matrix[pivotRow][numOfLinearEq] / tempWeight;
+            // column
+            for(int j = numOfLinearEq-1; j >= 0 ; j--) {
+                if(i != j){
+                    // xi = xi - (c[j]/c[i])*x[j]
+                    results[i] -= (matrix[pivotRow][j] / tempWeight) * results[j];
+                }
+            }
+        }
+    } // end backwardSubstitution
+    
+    /**
      * Gauss Jacobi iterative method
      * @param matrix augmented matrix
      */
-    public void Jacobi(float[][] matrix){
+    private void Jacobi(float[][] matrix){
         // asks user for desired error
         System.out.print("Enter the desired error in decimal form: ");
         float error = input.nextFloat();
@@ -236,7 +280,8 @@ public class GaussianElimination {
                 // column
                 for(int k = numOfLinearEq-1; k >= 0; k--){
                     if(k != j) {
-                        tempResults[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
+                        // subtract all values that are used for the sum
+                        results[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
                     }
                 }
             }
@@ -268,7 +313,7 @@ public class GaussianElimination {
      * Gauss Siedel iterative method
      * @param matrix augmented matrix
      */
-    public void Siedel(float [][] matrix){
+    private void Siedel(float [][] matrix){
         // asks user for desired error
         System.out.print("Enter the desired error in decimal form: ");
         float error = input.nextFloat();
@@ -292,6 +337,7 @@ public class GaussianElimination {
                 // column
                 for(int k = numOfLinearEq-1; k >= 0; k--){
                     if(k != j) {
+                        // subtract all values that are used for the sum
                         results[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
                     }
                 }
