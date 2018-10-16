@@ -46,12 +46,23 @@ public class GaussianElimination {
             // columns
             for(int j = 0; j < coefficients.length; j++){
                 matrix[i][j] = Float.parseFloat(coefficients[j]);
-                System.out.print(matrix[i][j] + " ");
             }
-            System.out.println();
         }
         return matrix;
     } // end getMatrix
+    
+    /** 
+     * prints the matrix
+     * @param matrix the augmented matrix
+     */
+    public void printMatrix(float[][] matrix){
+        for (float[] row : matrix) {
+            for (int column = 0; column < row.length; column++) {
+                System.out.print(row[column] + " ");
+            }
+            System.out.println("");
+        }
+    } // end printMatrix
     
     /**
      * performs the 3 algorithms that solves a system of equations
@@ -63,6 +74,7 @@ public class GaussianElimination {
         ge.input.nextLine();
         System.out.println(numOfLinearEq + " equations.");
         float[][] matrix = ge.getMatrix(numOfLinearEq);
+        ge.printMatrix(matrix);
     } // end main
     
 } // end GaussianElimination
