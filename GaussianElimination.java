@@ -222,21 +222,125 @@ public class GaussianElimination {
     
     /**
      * Gauss Jacobi iterative method
+     * @param matrix augmented matrix
      */
-    public void Jacobi(){
+    public void Jacobi(float[][] matrix){
+        // asks user for desired error
+        System.out.print("Enter the desired error in decimal form: ");
+        float error = input.nextFloat();
+        float totalError = 0;
         // results = x at latest iteration
         float[] results = new float[numOfLinearEq];
-        // initialize x0 to all zeros
+        float[] previousResults;
+        float[] tempResults = new float[numOfLinearEq];
+        // initialize x^0 to all zeros
         Arrays.fill(results, 0);
-        // converts 
-        for(int i = 0; i < 50; i++) {
+        // print intemediate x coefficient matrix
+        System.out.println("x^" + 0 + ":");
+        printResults(results);
+        // 50 iterations if desired error not achieved
+        for(int i = 0; i < 50; i++) {            
+            // row
             for(int j = 0; j < numOfLinearEq; j++){
-                for(int k = 0; k < numOfLinearEq+1; k++){
-                    results[j] = 
+                // set result to b value/xj coefficient
+                tempResults[j] = matrix[j][numOfLinearEq] / matrix[j][j];
+                // column
+                for(int k = numOfLinearEq-1; k >= 0; k--){
+                    if(k != j) {
+                        tempResults[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
+                    }
                 }
             }
+            // store old results and set current results
+            previousResults = Arrays.copyOf(results, results.length);
+            results = tempResults;
+            tempResults = new float[numOfLinearEq];
+            // will only calculate error when there's a previous iteration
+            if(i > 0){
+                // get the sum of error from all numbers
+                for (int k = 0; k < results.length; k++){
+                    totalError += Math.abs(results[k] - previousResults[k]) / 2; 
+                }
+                // if error achieved print results and break out of loop
+                if(totalError < error){
+                    System.out.println("x^" + (i+1) + ":");
+                    printResults(results);
+                    break;
+                }
+                totalError = 0;
+            }
+            // print intemediate x coefficient matrix
+            System.out.println("x^" + (i+1) + ":");
+            printResults(results);
         }
     } // end Jacobi
+    
+    /**
+    * Gauss Siedel iterative method
+     * @param matrix augmented matrix
+    */
+    public void Siedel(float [][] matrix){
+        // asks user for desired error
+        System.out.print("Enter the desired error in decimal form: ");
+        float error = input.nextFloat();
+        float totalError = 0;
+        // results = x at latest iteration
+        float[] results = new float[numOfLinearEq];
+        float[] previousResults;
+        // initialize x^0 to all zeros
+        Arrays.fill(results, 0);
+        // print intemediate x coefficient matrix
+        System.out.println("x^" + 0 + ":");
+        printResults(results);
+        // 50 iterations if desired error not achieved
+        for(int i = 0; i < 50; i++) { 
+            // store old results
+            previousResults = Arrays.copyOf(results, results.length);
+            // row
+            for(int j = 0; j < numOfLinearEq; j++){
+                // set result to b value/xj coefficient
+                results[j] = matrix[j][numOfLinearEq] / matrix[j][j];
+                // column
+                for(int k = numOfLinearEq-1; k >= 0; k--){
+                    if(k != j) {
+                        results[j] -= results[k] * (matrix[j][k] / matrix[j][j]);
+                    }
+                }
+            }
+            // will only calculate error when there's a previous iteration
+            if(i > 0){
+//                printResults(previousResults);
+//                System.out.println("");
+//                printResults(results);
+//                System.out.println("");
+                // get the sum of error from all numbers
+                for (int k = 0; k < results.length; k++){
+                    totalError += Math.abs(results[k] - previousResults[k]) / 2; 
+                }
+                // if error achieved print results and break out of loop
+                if(totalError < error){
+                    System.out.println("x^" + (i+1) + ":");
+                    printResults(results);
+                    break;
+                }
+                totalError = 0;
+            }
+            // print intemediate x coefficient matrix
+            System.out.println("x^" + (i+1) + ":");
+            printResults(results);
+        }
+    } // end Siedel
+    
+    /**
+     * prints the results from a method
+     * @param results results from a method 
+     */
+    public void printResults(float[] results){
+        for(int i = 0; i < results.length; i++){
+            System.out.println("x" + (i+1) + " = " + results[i]);
+        }
+        System.out.println("");
+    } // end print results;
     
     /** 
      * prints the matrix
@@ -260,8 +364,13 @@ public class GaussianElimination {
      */
     public static void main(String[] args) throws FileNotFoundException {
         GaussianElimination ge = new GaussianElimination();
-        GaussianElimination.printMatrix(ge.matrix);
+        float[][] myMatrix = ge.matrix;
+        GaussianElimination.printMatrix(myMatrix);
         //ge.scaledPartialPivoting();
+        System.out.println("Gauss Jacobi:");
+        ge.Jacobi(myMatrix);
+        System.out.println("Gauss Siedel:");
+        ge.Siedel(myMatrix);
     } // end main
     
 } // end GaussianElimination
